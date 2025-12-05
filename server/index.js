@@ -16,15 +16,17 @@ app.get('/', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Correo y contraseña son obligatorios' });
+    const { username, email, password } = req.body || {};
+    const userInput = username || email;
+
+    if (!userInput || !password) {
+        return res.status(400).json({ message: 'Usuario y contraseña son obligatorios' });
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@boutiquejm.com';
+    const adminUser = process.env.ADMIN_USER || process.env.ADMIN_EMAIL || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD || 'cambia-esta-clave';
 
-    if (email !== adminEmail || password !== adminPassword) {
+    if (userInput !== adminUser || password !== adminPassword) {
         return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 

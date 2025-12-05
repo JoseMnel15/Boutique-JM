@@ -4,7 +4,7 @@ import ThemeToggle from '../components/ThemeToggle';
 
 const Login = ({ theme, onToggleTheme }) => {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ const Login = ({ theme, onToggleTheme }) => {
             const response = await fetch('http://localhost:5000/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
             const data = await response.json();
             if (!response.ok) {
@@ -59,17 +59,20 @@ const Login = ({ theme, onToggleTheme }) => {
                         <div className="flex flex-col gap-6">
                             <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                                 <label className="flex flex-col w-full">
-                                    <p className="text-sm font-medium leading-normal pb-2 dark:text-slate-300">Correo Electrónico</p>
-                                    <input
-                                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#d0dbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark h-12 px-4 text-base font-normal leading-normal placeholder:text-[#4e7397] dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-primary focus:ring-primary/20 focus:ring-2 dark:text-slate-50"
-                                        placeholder="tu@ejemplo.com"
-                                        type="email"
-                                        name="email"
-                                        autoComplete="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
+                                    <p className="text-sm font-medium leading-normal pb-2 dark:text-slate-300">Usuario</p>
+                                    <div className="relative w-full">
+                                        <input
+                                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#d0dbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark h-12 pr-12 pl-4 text-lg font-normal leading-normal placeholder:text-[#4e7397] dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-primary focus:ring-primary/20 focus:ring-2 dark:text-slate-50"
+                                            placeholder="Escribe tu usuario"
+                                            type="text"
+                                            name="username"
+                                            autoComplete="username"
+                                            required
+                                            value={username}
+                                            onChange={(e) => setUsername(e.target.value)}
+                                        />
+                                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-transparent select-none">.</span>
+                                    </div>
                                 </label>
                                 <label className="flex flex-col w-full">
                                     <div className="flex justify-between items-baseline pb-2">
@@ -78,7 +81,7 @@ const Login = ({ theme, onToggleTheme }) => {
                                     </div>
                                     <div className="relative w-full">
                                         <input
-                                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#d0dbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark h-12 pr-12 pl-4 text-base font-normal leading-normal placeholder:text-[#4e7397] dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-primary focus:ring-primary/20 focus:ring-2 dark:text-slate-50"
+                                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#d0dbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark h-12 pr-12 pl-4 text-lg font-normal leading-normal placeholder:text-[#4e7397] dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-primary focus:ring-primary/20 focus:ring-2 dark:text-slate-50"
                                             placeholder="Ingresa tu contraseña"
                                             type={showPassword ? 'text' : 'password'}
                                             name="password"
@@ -109,8 +112,7 @@ const Login = ({ theme, onToggleTheme }) => {
                         </div>
                     </div>
                     <p className="mt-10 text-center text-sm text-[#4e7397] dark:text-slate-400">
-                        ¿No tienes una cuenta?
-                        <a className="font-semibold leading-6 text-primary hover:text-primary/80" href="#">Regístrate</a>
+                        Acceso privado. Si necesitas ayuda, contacta al administrador.
                     </p>
                 </div>
             </div>
