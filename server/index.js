@@ -15,6 +15,22 @@ app.get('/', (req, res) => {
     res.send('BoutiqueJM API Running');
 });
 
+app.post('/login', (req, res) => {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Correo y contraseña son obligatorios' });
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@boutiquejm.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'cambia-esta-clave';
+
+    if (email !== adminEmail || password !== adminPassword) {
+        return res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+
+    res.json({ message: 'Login exitoso', token: 'dummy-token' });
+});
+
 // Test DB connection
 app.get('/db-test', async (req, res) => {
     try {
