@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +10,7 @@ const roles = [
 ];
 
 const Users = () => {
-    const { apiBase, token } = useAuth();
+    const { apiBase, token, user: currentUser } = useAuth();
     const { theme, onToggleTheme } = useOutletContext();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -59,7 +60,12 @@ const Users = () => {
             const isEdit = Boolean(form.id);
 
             if (!/^[A-Za-z0-9]{3,}$/.test(usernameTrim)) {
-                setError('El usuario debe tener al menos 3 caracteres y solo letras o números.');
+                setError('El usuario debe tener al menos 3 caracteres, sin espacios y solo letras o números.');
+                setLoading(false);
+                return;
+            }
+            if (/\s/.test(form.username)) {
+                setError('El usuario no puede contener espacios.');
                 setLoading(false);
                 return;
             }
@@ -101,6 +107,59 @@ const Users = () => {
             setStatus(isEdit ? 'Usuario actualizado correctamente.' : 'Usuario creado correctamente.');
         } catch (err) {
             setError(err.message || 'Error al guardar usuario');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (userId) => {
+        const result = await Swal.fire({
+            title: 'Eliminar usuario',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            reverseButtons: true,
+        });
+        if (!result.isConfirmed) return;
+        setError('');
+        setStatus('');
+        setLoading(true);
+        try {
+            const res = await fetch(`${apiBase}/users/${userId}`, {
+                method: 'DELETE',
+                headers: authHeaders,
+            });
+            if (!res.ok) {
+                let msg = 'Error al eliminar usuario';
+                try {
+                    const data = await res.json();
+                    msg = data?.message || msg;
+                } catch {
+                    // ignore parse error
+                }
+                throw new Error(msg);
+            }
+            await loadUsers();
+            setStatus('Usuario eliminado correctamente.');
+            if (form.id === userId) {
+                setForm({ id: null, username: '', fullName: '', role: 'seller', password: '' });
+            }
+            Swal.fire({
+                icon: 'success',
+                title: 'Usuario eliminado',
+                timer: 1400,
+                showConfirmButton: false,
+            });
+        } catch (err) {
+            setError(err.message || 'Error al eliminar usuario');
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo eliminar',
+                text: err.message || 'Intenta de nuevo',
+            });
         } finally {
             setLoading(false);
         }
@@ -234,9 +293,18 @@ const Users = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => startEdit(u)}
-                                                        className="text-primary hover:underline text-sm font-semibold"
+                                                        className="text-primary hover:underline text-sm font-semibold mr-3"
                                                     >
                                                         Editar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDelete(u.id)}
+                                                        disabled={currentUser?.id === u.id}
+                                                        className={`text-sm font-semibold ${currentUser?.id === u.id ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:underline'}`}
+                                                        title={currentUser?.id === u.id ? 'No puedes eliminar tu propio usuario activo' : 'Eliminar usuario'}
+                                                    >
+                                                        Eliminar
                                                     </button>
                                                 </td>
                                             </tr>

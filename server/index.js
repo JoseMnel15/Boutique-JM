@@ -171,6 +171,20 @@ app.put('/users/:id', authMiddleware, async (req, res) => {
     }
 });
 
+app.delete('/users/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { rowCount } = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        if (!rowCount) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        res.status(204).send();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
 // Test DB connection
 app.get('/db-test', async (req, res) => {
     try {
