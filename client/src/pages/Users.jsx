@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,11 +8,13 @@ const roles = [
     { value: 'seller', label: 'Vendedor' },
 ];
 
-const Users = ({ theme, onToggleTheme }) => {
+const Users = () => {
     const { apiBase, token } = useAuth();
+    const { theme, onToggleTheme } = useOutletContext();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [status, setStatus] = useState('');
     const [form, setForm] = useState({ id: null, username: '', fullName: '', role: 'seller', password: '' });
 
     const authHeaders = useMemo(() => ({
@@ -21,6 +24,7 @@ const Users = ({ theme, onToggleTheme }) => {
 
     const loadUsers = useCallback(async () => {
         setError('');
+        setStatus('');
         setLoading(true);
         try {
             const res = await fetch(`${apiBase}/users`, { headers: authHeaders });
@@ -49,14 +53,39 @@ const Users = ({ theme, onToggleTheme }) => {
         setError('');
         setLoading(true);
         try {
+            const usernameTrim = form.username.trim();
+            const fullNameTrim = form.fullName.trim();
+            const allowedRoles = roles.map((r) => r.value);
+            const isEdit = Boolean(form.id);
+
+            if (!/^[A-Za-z0-9]{3,}$/.test(usernameTrim)) {
+                setError('El usuario debe tener al menos 3 caracteres y solo letras o números.');
+                setLoading(false);
+                return;
+            }
+            if (!allowedRoles.includes(form.role)) {
+                setError('Rol inválido.');
+                setLoading(false);
+                return;
+            }
+            if (!isEdit && !form.password) {
+                setError('La contraseña es obligatoria al crear un usuario.');
+                setLoading(false);
+                return;
+            }
+            if (form.password && form.password.length < 6) {
+                setError('La contraseña debe tener al menos 6 caracteres.');
+                setLoading(false);
+                return;
+            }
+
             const payload = {
-                username: form.username,
-                fullName: form.fullName,
+                username: usernameTrim,
+                fullName: fullNameTrim || null,
                 role: form.role,
             };
             if (form.password) payload.password = form.password;
 
-            const isEdit = Boolean(form.id);
             const url = isEdit ? `${apiBase}/users/${form.id}` : `${apiBase}/users`;
             const method = isEdit ? 'PUT' : 'POST';
             const res = await fetch(url, {
@@ -68,15 +97,17 @@ const Users = ({ theme, onToggleTheme }) => {
             if (!res.ok) throw new Error(data?.message || 'Error al guardar usuario');
 
             await loadUsers();
-            setForm({ id: null, username: '', fullName: '', role: 'user', password: '' });
+            setForm({ id: null, username: '', fullName: '', role: 'seller', password: '' });
+            setStatus(isEdit ? 'Usuario actualizado correctamente.' : 'Usuario creado correctamente.');
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Error al guardar usuario');
         } finally {
             setLoading(false);
         }
     };
 
     const startEdit = (user) => {
+        setStatus('');
         setForm({
             id: user.id,
             username: user.username,
@@ -105,6 +136,11 @@ const Users = ({ theme, onToggleTheme }) => {
                             {error && (
                                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/40 dark:text-red-200">
                                     {error}
+                                </div>
+                            )}
+                            {status && !error && (
+                                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/40 dark:text-green-200">
+                                    {status}
                                 </div>
                             )}
                             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -159,11 +195,11 @@ const Users = ({ theme, onToggleTheme }) => {
                                     {form.id && (
                                         <button
                                             type="button"
-                                            onClick={() => setForm({ id: null, username: '', fullName: '', role: 'user', password: '' })}
-                                            className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                                        >
-                                            Cancelar
-                                        </button>
+                                        onClick={() => setForm({ id: null, username: '', fullName: '', role: 'seller', password: '' })}
+                                        className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                                    >
+                                        Cancelar
+                                    </button>
                                     )}
                                 </div>
                             </form>
