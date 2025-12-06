@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? children : <Navigate to="/" replace />;
+};
+
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+};
 
 function App() {
   const [theme, setTheme] = useState(() => {
@@ -33,10 +46,12 @@ function App() {
   };
 
   return (
-    <Routes>
-      <Route path="/" element={<Login theme={theme} onToggleTheme={toggleTheme} />} />
-      <Route path="/dashboard" element={<Dashboard theme={theme} onToggleTheme={toggleTheme} />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<PublicRoute><Login theme={theme} onToggleTheme={toggleTheme} /></PublicRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard theme={theme} onToggleTheme={toggleTheme} /></ProtectedRoute>} />
+      </Routes>
+    </AuthProvider>
   );
 }
 

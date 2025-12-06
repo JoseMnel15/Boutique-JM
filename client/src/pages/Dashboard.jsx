@@ -1,17 +1,22 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = ({ theme, onToggleTheme }) => {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
     return (
         <div className="relative flex min-h-screen w-full bg-background-light dark:bg-background-dark text-gray-900 dark:text-slate-50">
             {/* SideNavBar */}
             <aside className="flex w-64 flex-col bg-white dark:bg-gray-800/50 p-4 border-r border-gray-200 dark:border-gray-700/50 sticky top-0 h-screen">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3 px-3">
-                        <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Boutique Logo" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAfbhilQrBbu12o2adB75tI8KvRI7dUAW5UwX63XfHengdSct1ZaRqDOftXlUE-w3vQtZIvq6A93E0bJgGR9U6wEJq0Ld0abSqYna-gP4xL-1IdSY5ocHHWb-IkJ4xnwdvtIIbiNLGRQVmoEgV1BpDhDhGPQkHFtzxBMxnqvHy3NQxOjprESw9IPYSFqPIF5amjNPTtmH7SzODNirgSueulPekedv2JTab8QLgfHYwtUiMHpSmnKdIqU4wi_s5sJxUi-5QtxWQeodLjM")' }}></div>
+                        <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Boutique Logo" style={{ backgroundImage: 'url("https://scontent.fcvj2-1.fna.fbcdn.net/v/t39.30808-6/416287334_335374916044076_5319562323245462165_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=ae-8Qx94EGYQ7kNvwHO5xTP&_nc_oc=AdnG_SLPm_FVcXBeW8rx95vm4L-rGkFFMh0FA0TevedX0HfBFQrTqo4YXM_VdioTr6c&_nc_zt=23&_nc_ht=scontent.fcvj2-1.fna&_nc_gid=YGPtIhQUL8XZC0MAdIgvYw&oh=00_AflmfcFmjGCGzhap118rQbJHbPz6eULGpyWx0Ba-NkUJYA&oe=69396428")' }}></div>
                         <div className="flex flex-col">
-                            <h1 className="text-gray-900 dark:text-white text-base font-bold leading-normal">Chic Boutique</h1>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">por Jane Doe</p>
+                            <h1 className="text-gray-900 dark:text-white text-base font-bold leading-normal">BoutiqueJM</h1>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">{user?.fullName || user?.username}</p>
                         </div>
                     </div>
                     <nav className="flex flex-col gap-2 mt-4">
@@ -39,6 +44,10 @@ const Dashboard = ({ theme, onToggleTheme }) => {
                             <span className="material-symbols-outlined">settings</span>
                             <p className="text-sm font-medium leading-normal">Configuración</p>
                         </a>
+                        <a className="flex items-center gap-3 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg" href="#">
+                            <span className="material-symbols-outlined">badge</span>
+                            <p className="text-sm font-medium leading-normal">Usuarios y Roles</p>
+                        </a>
                     </nav>
                 </div>
                 <div className="flex flex-col gap-4 mt-auto">
@@ -46,10 +55,17 @@ const Dashboard = ({ theme, onToggleTheme }) => {
                         <span className="truncate">Agregar Producto</span>
                     </button>
                     <div className="flex flex-col gap-1">
-                        <a className="flex items-center gap-3 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg" href="#">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                logout();
+                                navigate('/');
+                            }}
+                            className="flex items-center gap-3 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg text-left"
+                        >
                             <span className="material-symbols-outlined">logout</span>
                             <p className="text-sm font-medium leading-normal">Cerrar Sesión</p>
-                        </a>
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -60,7 +76,7 @@ const Dashboard = ({ theme, onToggleTheme }) => {
                     <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
                         <div className="flex min-w-72 flex-col gap-1">
                             <p className="text-gray-900 dark:text-white text-3xl font-bold leading-tight">Panel</p>
-                            <p className="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">¡Bienvenida, Jane! Aquí tienes un resumen del rendimiento de tu boutique.</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">¡Bienvenid@, {user?.fullName || user?.username}! Aquí tienes un resumen del rendimiento de tu boutique.</p>
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto">
                             <div className="flex-grow max-w-md">

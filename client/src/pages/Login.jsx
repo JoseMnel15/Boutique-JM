@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import { useAuth } from '../context/AuthContext';
 
 const Login = ({ theme, onToggleTheme }) => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -15,15 +17,7 @@ const Login = ({ theme, onToggleTheme }) => {
         setError('');
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data?.message || 'Error al iniciar sesión');
-            }
+            await login(username, password);
             navigate('/dashboard');
         } catch (err) {
             setError(err.message || 'Error al iniciar sesión');
