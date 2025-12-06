@@ -97,6 +97,80 @@ app.get('/me', authMiddleware, async (req, res) => {
     }
 });
 
+// Users CRUD (simple)
+app.get('/users', authMiddleware, async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, username, full_name, role, created_at, updated_at FROM users ORDER BY id');
+        res.json({ users: rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+app.post('/users', authMiddleware, async (req, res) => {
+    const { username, fullName, password, role } = req.body || {};
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Usuario y contraseña son obligatorios' });
+    }
+    const userRole = role || 'seller';
+    try {
+        const { rows } = await pool.query(
+            `INSERT INTO users (username, full_name, password_hash, role)
+             VALUES ($1, $2, crypt($3, gen_salt('bf')), $4)
+             RETURNING id, username, full_name, role, created_at, updated_at`,
+            [username, fullName || null, password, userRole],
+        );
+        res.status(201).json({ user: rows[0] });
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ message: 'El usuario ya existe' });
+        }
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+app.put('/users/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { username, fullName, password, role } = req.body || {};
+    if (!username) {
+        return res.status(400).json({ message: 'Usuario es obligatorio' });
+    }
+    try {
+        const updates = [];
+        const values = [];
+        let idx = 1;
+
+        updates.push(`username = $${idx++}`); values.push(username);
+        updates.push(`full_name = $${idx++}`); values.push(fullName || null);
+        updates.push(`role = $${idx++}`); values.push(role || 'seller');
+        if (password) {
+            updates.push(`password_hash = crypt($${idx++}, gen_salt('bf'))`);
+            values.push(password);
+        }
+        values.push(id);
+
+        const { rows } = await pool.query(
+            `UPDATE users
+             SET ${updates.join(', ')}, updated_at = now()
+             WHERE id = $${idx}
+             RETURNING id, username, full_name, role, created_at, updated_at`,
+            values,
+        );
+        if (!rows.length) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        res.json({ user: rows[0] });
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ message: 'El usuario ya existe' });
+        }
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
 // Test DB connection
 app.get('/db-test', async (req, res) => {
     try {

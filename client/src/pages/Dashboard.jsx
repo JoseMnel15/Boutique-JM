@@ -44,7 +44,7 @@ const Dashboard = ({ theme, onToggleTheme }) => {
                             <span className="material-symbols-outlined">settings</span>
                             <p className="text-sm font-medium leading-normal">Configuración</p>
                         </a>
-                        <a className="flex items-center gap-3 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg" href="#">
+                        <a className="flex items-center gap-3 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg" href="/users">
                             <span className="material-symbols-outlined">badge</span>
                             <p className="text-sm font-medium leading-normal">Usuarios y Roles</p>
                         </a>

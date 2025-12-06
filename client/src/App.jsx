@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Users from './pages/Users';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +51,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PublicRoute><Login theme={theme} onToggleTheme={toggleTheme} /></PublicRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard theme={theme} onToggleTheme={toggleTheme} /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute><Users theme={theme} onToggleTheme={toggleTheme} /></ProtectedRoute>} />
       </Routes>
     </AuthProvider>
   );
