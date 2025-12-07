@@ -34,7 +34,7 @@ const Layout = ({ theme, onToggleTheme }) => {
                         </NavLink>
                         <NavLink className={({ isActive }) => `${linkBase} ${isActive ? activeLink : ''}`} to="/products">
                             <span className="material-symbols-outlined">shopping_bag</span>
-                            <p className="text-sm font-medium leading-normal">Productos</p>
+                            <p className="text-sm font-medium leading-normal">Inventario</p>
                         </NavLink>
                         <a className={linkBase} href="#">
                             <span className="material-symbols-outlined">receipt_long</span>

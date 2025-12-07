@@ -31,6 +31,7 @@ const Products = () => {
     const [showModal, setShowModal] = useState(false);
     const [brandMode, setBrandMode] = useState('select'); // select | new
     const [newBrand, setNewBrand] = useState('');
+    const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState({
         name: '',
         brand: '',
@@ -78,12 +79,6 @@ const Products = () => {
     }, [loadData]);
 
     useEffect(() => {
-        if (showModal && !brands.length) {
-            loadData();
-        }
-    }, [showModal, brands.length, loadData]);
-
-    useEffect(() => {
         if (showModal) {
             document.body.style.overflow = 'hidden';
         } else {
@@ -91,6 +86,28 @@ const Products = () => {
         }
         return () => { document.body.style.overflow = ''; };
     }, [showModal]);
+
+    useEffect(() => {
+        if (showModal && !brands.length) {
+            loadData();
+        }
+    }, [showModal, brands.length, loadData]);
+
+    const resetForm = () => {
+        setForm({
+            name: '',
+            brand: brands[0]?.id || '',
+            category: 'tenis',
+            sku: '',
+            price: '',
+            stock: '',
+            size: '',
+            color: '',
+        });
+        setBrandMode('select');
+        setNewBrand('');
+        setEditingId(null);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -122,15 +139,10 @@ const Products = () => {
         const createBrandIfNeeded = async () => {
             if (brandMode !== 'new') return form.brand;
             const brandName = newBrand.trim();
-            if (!brandName) {
-                throw new Error('La marca es obligatoria.');
-            }
+            if (!brandName) throw new Error('La marca es obligatoria.');
             const res = await fetch(`${apiBase}/brands`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ name: brandName }),
             });
             const data = await res.json();
@@ -140,50 +152,83 @@ const Products = () => {
             return data.brand.id;
         };
 
-        const createProduct = async (brandId) => {
-            const res = await fetch(`${apiBase}/products`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    name: form.name.trim(),
-                    brandId,
-                    category: form.category,
-                    sku: form.sku.trim(),
-                    price: Number(form.price),
-                    stock: Number(form.stock),
-                    size: sizeType === 'none' ? null : form.size,
-                    color: form.color.trim() || '—',
-                }),
+        const persistProduct = async (brandId) => {
+            const payload = {
+                name: form.name.trim(),
+                brandId,
+                category: form.category,
+                sku: form.sku.trim(),
+                price: Number(form.price),
+                stock: Number(form.stock),
+                size: sizeType === 'none' ? null : form.size,
+                color: form.color.trim() || '—',
+            };
+            const url = editingId ? `${apiBase}/products/${editingId}` : `${apiBase}/products`;
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.message || 'No se pudo guardar el producto');
-            setProducts((prev) => [data.product, ...prev]);
+            if (editingId) {
+                setProducts((prev) => prev.map((p) => (p.id === data.product.id ? data.product : p)));
+            } else {
+                setProducts((prev) => [data.product, ...prev]);
+            }
         };
 
         try {
             const brandId = await createBrandIfNeeded();
-            await createProduct(brandId);
-            setStatus('Producto agregado al inventario.');
-            setForm({
-                name: '',
-                brand: brandId,
-                category: form.category,
-                sku: '',
-                price: '',
-                stock: '',
-                size: '',
-                color: '',
-            });
-            setBrandMode('select');
-            setNewBrand('');
+            await persistProduct(brandId);
+            setStatus(editingId ? 'Producto actualizado.' : 'Producto agregado al inventario.');
+            resetForm();
             setShowModal(false);
         } catch (err) {
             setError(err.message || 'Error al guardar producto');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const startEdit = (product) => {
+        setError('');
+        setStatus('');
+        setEditingId(product.id);
+        setBrandMode('select');
+        setNewBrand('');
+        setForm({
+            name: product.name || '',
+            brand: product.brand_id || product.brand || '',
+            category: product.category || 'tenis',
+            sku: product.sku || '',
+            price: product.price || '',
+            stock: product.stock || '',
+            size: product.size || '',
+            color: product.color || '',
+        });
+        setShowModal(true);
+    };
+
+    const handleDelete = async (id) => {
+        const ok = window.confirm('¿Eliminar este producto? Esta acción no se puede deshacer.');
+        if (!ok) return;
+        setError('');
+        setStatus('');
+        try {
+            const res = await fetch(`${apiBase}/products/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || 'No se pudo eliminar');
+            }
+            setProducts((prev) => prev.filter((p) => p.id !== id));
+            setStatus('Producto eliminado.');
+        } catch (err) {
+            setError(err.message || 'Error al eliminar');
         }
     };
 
@@ -205,7 +250,7 @@ const Products = () => {
                         {error && <span className="text-sm text-red-600 dark:text-red-300">{error}</span>}
                         <button
                             type="button"
-                            onClick={() => { setError(''); setStatus(''); setShowModal(true); }}
+                            onClick={() => { resetForm(); setError(''); setStatus(''); setShowModal(true); }}
                             className="inline-flex items-center gap-2 rounded-lg bg-primary text-white font-semibold px-4 py-2 hover:bg-primary/90"
                         >
                             <span className="material-symbols-outlined text-base">add</span>
@@ -217,34 +262,55 @@ const Products = () => {
                     <table className="min-w-full text-left text-sm font-light">
                         <thead className="border-b border-gray-200 dark:border-gray-700 font-medium">
                             <tr>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Producto</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Marca</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Categoría</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">SKU</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Precio</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Stock</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Talla</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Público</th>
-                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Color</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Producto</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Marca</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Categoría</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">SKU</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Precio</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Stock</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Talla</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Público</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Color</th>
+                                <th className="px-4 py-2 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                             {products.map((p) => (
                                 <tr key={p.id}>
-                                    <td className="whitespace-nowrap px-6 py-3 font-medium text-gray-900 dark:text-white">{p.name}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.brand_name || p.brand}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{categoryConfig[p.category]?.label || p.category}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.sku}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">${Number(p.price).toLocaleString()}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.stock}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.size || '—'}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.gender || categoryConfig[p.category]?.audience}</td>
-                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.color}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900 dark:text-white">{p.name}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.brand_name || p.brand}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{categoryConfig[p.category]?.label || p.category}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.sku}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">${Number(p.price).toLocaleString()}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.stock}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.size || '—'}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.gender || categoryConfig[p.category]?.audience}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-300">{p.color}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-xs md:text-sm text-gray-700 dark:text-gray-200">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => startEdit(p)}
+                                                className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2.5 py-1 text-primary hover:bg-primary/10 font-semibold"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">edit</span>
+                                                <span className="hidden sm:inline">Editar</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(p.id)}
+                                                className="inline-flex items-center gap-1 rounded-md border border-red-500/50 px-2.5 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                                <span className="hidden sm:inline">Eliminar</span>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {!products.length && (
                                 <tr>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" colSpan={9}>Sin productos en inventario.</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" colSpan={10}>Sin productos en inventario.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -257,7 +323,7 @@ const Products = () => {
                     <div className="w-full max-w-3xl max-h-[80vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
                         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
                             <div className="flex flex-col">
-                                <p className="text-lg font-semibold text-gray-900 dark:text-white">Agregar producto</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">{editingId ? 'Editar producto' : 'Agregar producto'}</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Define tallas y detalles según la categoría.</p>
                             </div>
                             <button
@@ -395,7 +461,7 @@ const Products = () => {
                                 <div className="md:col-span-2 flex justify-end gap-3 pt-2">
                                     <button
                                         type="button"
-                                        onClick={() => { setShowModal(false); setError(''); }}
+                                        onClick={() => { setShowModal(false); setError(''); resetForm(); }}
                                         className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                         Cancelar
@@ -405,7 +471,7 @@ const Products = () => {
                                         disabled={loading}
                                         className="rounded-lg bg-primary text-white font-semibold px-4 py-2 hover:bg-primary/90 disabled:opacity-70"
                                     >
-                                        Guardar
+                                        {editingId ? 'Actualizar' : 'Guardar'}
                                     </button>
                                 </div>
                             </form>

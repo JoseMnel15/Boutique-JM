@@ -192,6 +192,73 @@ app.post('/products', authMiddleware, async (req, res) => {
     }
 });
 
+app.put('/products/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { name, brandId, category, sku, price, stock, size, color } = req.body || {};
+    if (!name || !brandId || !category || !sku) {
+        return res.status(400).json({ message: 'Nombre, marca, categoría y SKU son obligatorios' });
+    }
+    if (!CATEGORY_MAP[category]) {
+        return res.status(400).json({ message: 'Categoría inválida' });
+    }
+    if (price === undefined || Number(price) <= 0) {
+        return res.status(400).json({ message: 'Precio inválido' });
+    }
+    if (stock === undefined || Number(stock) < 0) {
+        return res.status(400).json({ message: 'Inventario inválido' });
+    }
+
+    const gender = CATEGORY_MAP[category] || 'Unisex';
+
+    try {
+        const { rows } = await pool.query(
+            `UPDATE products
+             SET name = $1,
+                 brand_id = $2,
+                 category = $3,
+                 sku = $4,
+                 price = $5,
+                 stock = $6,
+                 size = $7,
+                 color = $8,
+                 gender = $9,
+                 created_at = created_at
+             WHERE id = $10
+             RETURNING id, name, category, sku, price, stock, size, color, gender, created_at`,
+            [name.trim(), brandId, category, sku.trim(), Number(price), Number(stock), size || null, color || null, gender, id],
+        );
+        if (!rows.length) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+        const brandRes = await pool.query('SELECT id, name FROM brands WHERE id = $1', [brandId]);
+        const brand = brandRes.rows[0];
+        return res.json({ product: { ...rows[0], brand_id: brand.id, brand_name: brand.name } });
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ message: 'SKU duplicado' });
+        }
+        if (err.code === '23503') {
+            return res.status(400).json({ message: 'Marca no encontrada' });
+        }
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+app.delete('/products/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { rowCount } = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        if (!rowCount) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+        res.status(204).send();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
 // Users CRUD (simple)
 app.get('/users', authMiddleware, async (req, res) => {
     try {
