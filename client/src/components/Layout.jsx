@@ -32,10 +32,10 @@ const Layout = ({ theme, onToggleTheme }) => {
                             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
                             <p className="text-sm font-semibold leading-normal">Panel</p>
                         </NavLink>
-                        <a className={linkBase} href="#">
+                        <NavLink className={({ isActive }) => `${linkBase} ${isActive ? activeLink : ''}`} to="/products">
                             <span className="material-symbols-outlined">shopping_bag</span>
                             <p className="text-sm font-medium leading-normal">Productos</p>
-                        </a>
+                        </NavLink>
                         <a className={linkBase} href="#">
                             <span className="material-symbols-outlined">receipt_long</span>
                             <p className="text-sm font-medium leading-normal">Ordenes</p>

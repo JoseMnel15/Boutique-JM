@@ -1,0 +1,420 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
+import { useAuth } from '../context/AuthContext';
+
+const categoryConfig = {
+    tenis: { label: 'Tenis', sizeType: 'shoe', audience: 'Unisex' },
+    bolsos: { label: 'Bolsos', sizeType: 'none', audience: 'Mujer' },
+    ropaDama: { label: 'Ropa Dama', sizeType: 'clothing', audience: 'Mujer' },
+    ropaHombre: { label: 'Ropa Hombre', sizeType: 'clothing', audience: 'Hombre' },
+    ropaNina: { label: 'Ropa Niña', sizeType: 'kids-clothing', audience: 'Niña' },
+    ropaNino: { label: 'Ropa Niño', sizeType: 'kids-clothing', audience: 'Niño' },
+    accesorios: { label: 'Accesorios', sizeType: 'none', audience: 'Unisex' },
+};
+
+const sizeOptionsByType = {
+    shoe: ['23', '24', '25', '26', '27', '28', '29', '30'],
+    clothing: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    'kids-clothing': ['2', '4', '6', '8', '10', '12', '14'],
+};
+
+const Products = () => {
+    const { theme, onToggleTheme } = useOutletContext();
+    const { apiBase, token, logout } = useAuth();
+
+    const [brands, setBrands] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [status, setStatus] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [brandMode, setBrandMode] = useState('select'); // select | new
+    const [newBrand, setNewBrand] = useState('');
+    const [form, setForm] = useState({
+        name: '',
+        brand: '',
+        category: 'tenis',
+        sku: '',
+        price: '',
+        stock: '',
+        size: '',
+        color: '',
+    });
+
+    const sizeType = categoryConfig[form.category]?.sizeType || 'none';
+    const sizeOptions = sizeOptionsByType[sizeType] || [];
+    const categoryLabel = useMemo(() => categoryConfig[form.category]?.label || '', [form.category]);
+
+    const loadData = useCallback(async () => {
+        if (!token) return;
+        setError('');
+        try {
+            const [brandsRes, productsRes] = await Promise.all([
+                fetch(`${apiBase}/brands`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${apiBase}/products`, { headers: { Authorization: `Bearer ${token}` } }),
+            ]);
+            if (brandsRes.status === 401 || productsRes.status === 401) {
+                logout();
+                throw new Error('Sesión inválida. Inicia sesión de nuevo.');
+            }
+            const brandsData = await brandsRes.json();
+            const productsData = await productsRes.json();
+            if (!brandsRes.ok) throw new Error(brandsData?.message || 'No se pudieron cargar las marcas');
+            if (!productsRes.ok) throw new Error(productsData?.message || 'No se pudieron cargar los productos');
+            setBrands(brandsData.brands || []);
+            setProducts(productsData.products || []);
+            if ((brandsData.brands || []).length) {
+                setForm((prev) => ({ ...prev, brand: prev.brand || brandsData.brands[0].id }));
+            }
+        } catch (err) {
+            const apiMessage = apiBase ? '' : ' VITE_API_URL no está definido.';
+            setError(err.message || `Error al cargar inventario.${apiMessage}`);
+        }
+    }, [apiBase, token, logout]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    useEffect(() => {
+        if (showModal && !brands.length) {
+            loadData();
+        }
+    }, [showModal, brands.length, loadData]);
+
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [showModal]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setStatus('');
+        setLoading(true);
+
+        if (!form.name.trim() || !form.sku.trim() || (!form.brand && brandMode !== 'new')) {
+            setError('Nombre, marca y SKU son obligatorios.');
+            setLoading(false);
+            return;
+        }
+        if (Number(form.price) <= 0 || Number.isNaN(Number(form.price))) {
+            setError('Precio debe ser mayor a 0.');
+            setLoading(false);
+            return;
+        }
+        if (Number(form.stock) < 0 || Number.isNaN(Number(form.stock))) {
+            setError('Inventario no puede ser negativo.');
+            setLoading(false);
+            return;
+        }
+        if (sizeType !== 'none' && !form.size) {
+            setError('Selecciona una talla para esta categoría.');
+            setLoading(false);
+            return;
+        }
+
+        const createBrandIfNeeded = async () => {
+            if (brandMode !== 'new') return form.brand;
+            const brandName = newBrand.trim();
+            if (!brandName) {
+                throw new Error('La marca es obligatoria.');
+            }
+            const res = await fetch(`${apiBase}/brands`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ name: brandName }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.message || 'No se pudo crear la marca');
+            const updatedBrands = [...brands, data.brand].sort((a, b) => a.name.localeCompare(b.name));
+            setBrands(updatedBrands);
+            return data.brand.id;
+        };
+
+        const createProduct = async (brandId) => {
+            const res = await fetch(`${apiBase}/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    brandId,
+                    category: form.category,
+                    sku: form.sku.trim(),
+                    price: Number(form.price),
+                    stock: Number(form.stock),
+                    size: sizeType === 'none' ? null : form.size,
+                    color: form.color.trim() || '—',
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.message || 'No se pudo guardar el producto');
+            setProducts((prev) => [data.product, ...prev]);
+        };
+
+        try {
+            const brandId = await createBrandIfNeeded();
+            await createProduct(brandId);
+            setStatus('Producto agregado al inventario.');
+            setForm({
+                name: '',
+                brand: brandId,
+                category: form.category,
+                sku: '',
+                price: '',
+                stock: '',
+                size: '',
+                color: '',
+            });
+            setBrandMode('select');
+            setNewBrand('');
+            setShowModal(false);
+        } catch (err) {
+            setError(err.message || 'Error al guardar producto');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="p-8 w-full max-w-7xl mx-auto">
+            <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div className="flex flex-col gap-1">
+                    <p className="text-gray-900 dark:text-white text-3xl font-bold leading-tight">Inventario</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">Agrega y gestiona productos de boutique.</p>
+                </div>
+                <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </header>
+
+            <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800/50">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Listado de inventario</h3>
+                    <div className="flex items-center gap-3">
+                        {status && !error && <span className="text-sm text-green-600 dark:text-green-300">{status}</span>}
+                        {error && <span className="text-sm text-red-600 dark:text-red-300">{error}</span>}
+                        <button
+                            type="button"
+                            onClick={() => { setError(''); setStatus(''); setShowModal(true); }}
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary text-white font-semibold px-4 py-2 hover:bg-primary/90"
+                        >
+                            <span className="material-symbols-outlined text-base">add</span>
+                            Agregar producto
+                        </button>
+                    </div>
+                </div>
+                <div className="overflow-x-auto -mx-6">
+                    <table className="min-w-full text-left text-sm font-light">
+                        <thead className="border-b border-gray-200 dark:border-gray-700 font-medium">
+                            <tr>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Producto</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Marca</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Categoría</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">SKU</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Precio</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Stock</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Talla</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Público</th>
+                                <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Color</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {products.map((p) => (
+                                <tr key={p.id}>
+                                    <td className="whitespace-nowrap px-6 py-3 font-medium text-gray-900 dark:text-white">{p.name}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.brand_name || p.brand}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{categoryConfig[p.category]?.label || p.category}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.sku}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">${Number(p.price).toLocaleString()}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.stock}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.size || '—'}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.gender || categoryConfig[p.category]?.audience}</td>
+                                    <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.color}</td>
+                                </tr>
+                            ))}
+                            {!products.length && (
+                                <tr>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" colSpan={9}>Sin productos en inventario.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 py-10">
+                    <div className="w-full max-w-3xl max-h-[80vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                            <div className="flex flex-col">
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">Agregar producto</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Define tallas y detalles según la categoría.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setShowModal(false); setError(''); setStatus(''); }}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {error && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/40 dark:text-red-200 mb-4">
+                                    {error}
+                                </div>
+                            )}
+                            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Nombre
+                                    <input
+                                        className="form-input w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.name}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                                        placeholder="Vestido Luna"
+                                        required
+                                    />
+                                </label>
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Marca
+                                    <select
+                                        className="form-select w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={brandMode === 'new' ? '__add_brand__' : form.brand}
+                                        onChange={(e) => {
+                                            if (e.target.value === '__add_brand__') {
+                                                setBrandMode('new');
+                                                setForm((prev) => ({ ...prev, brand: '' }));
+                                            } else {
+                                                setBrandMode('select');
+                                                setForm((prev) => ({ ...prev, brand: e.target.value }));
+                                                setNewBrand('');
+                                            }
+                                        }}
+                                    >
+                                        {brands.map((b) => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                        <option value="__add_brand__">+ Agregar marca</option>
+                                    </select>
+                                </label>
+                                {brandMode === 'new' && (
+                                    <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 md:col-span-2">
+                                        Nueva marca
+                                        <input
+                                            className="form-input w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                            value={newBrand}
+                                            onChange={(e) => setNewBrand(e.target.value)}
+                                            placeholder="Ej. Lacoste"
+                                            required
+                                        />
+                                    </label>
+                                )}
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Categoría
+                                    <select
+                                        className="form-select w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.category}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, size: '' }))}
+                                    >
+                                        {Object.entries(categoryConfig).map(([value, cfg]) => (
+                                            <option key={value} value={value}>{cfg.label}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    SKU
+                                    <input
+                                        className="form-input w/full rounded-lg border border-gray-300 dark.border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.sku}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))}
+                                        placeholder="TEN-001"
+                                        required
+                                    />
+                                </label>
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Precio
+                                    <input
+                                        type="number"
+                                        className="form-input w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.price}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="1499"
+                                        required
+                                    />
+                                </label>
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Inventario
+                                    <input
+                                        type="number"
+                                        className="form-input w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.stock}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, stock: e.target.value }))}
+                                        min="0"
+                                        step="1"
+                                        placeholder="10"
+                                        required
+                                    />
+                                </label>
+                                {sizeType !== 'none' && (
+                                    <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        Talla ({categoryLabel})
+                                        <select
+                                            className="form-select w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                            value={form.size}
+                                            onChange={(e) => setForm((prev) => ({ ...prev, size: e.target.value }))}
+                                            required
+                                        >
+                                            <option value="">Selecciona talla</option>
+                                            {sizeOptions.map((sz) => (
+                                                <option key={sz} value={sz}>{sz}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                )}
+                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Color
+                                    <input
+                                        className="form-input w/full rounded-lg border border-gray-300 dark.border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                        value={form.color}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
+                                        placeholder="Negro, Azul, Camel"
+                                    />
+                                </label>
+                                <div className="md:col-span-2 flex justify-end gap-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowModal(false); setError(''); }}
+                                        className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="rounded-lg bg-primary text-white font-semibold px-4 py-2 hover:bg-primary/90 disabled:opacity-70"
+                                    >
+                                        Guardar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Products;

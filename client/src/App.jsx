@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import Products from './pages/Products';
 import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -54,6 +55,7 @@ function App() {
         <Route element={<ProtectedRoute><Layout theme={theme} onToggleTheme={toggleTheme} /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/products" element={<Products />} />
         </Route>
       </Routes>
     </AuthProvider>

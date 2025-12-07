@@ -54,41 +54,47 @@ const Dashboard = () => {
                 </div>
             </section>
 
-            {/* Main Dashboard Content: Chart + Recent Orders */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Sales Chart */}
-                <div className="lg:col-span-2 flex flex-col gap-2 rounded-xl border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800/50">
-                    <div className="flex justify-between items-center mb-2">
+            {/* Main Dashboard Content: Top Products + Recent Orders */}
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top Products */}
+                <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800/50">
+                    <div className="flex justify-between items-center">
                         <div>
-                            <p className="text-gray-900 dark:text-white text-lg font-semibold leading-normal">Resumen de Ventas</p>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">Ingresos de las últimas 4 semanas.</p>
+                            <p className="text-gray-900 dark:text-white text-lg font-semibold leading-normal">Top productos</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">Los 5 más vendidos este mes.</p>
                         </div>
-                        <div className="flex gap-1 items-center">
-                            <p className="text-gray-600 dark:text-gray-300 text-sm font-normal leading-normal">Este Mes</p>
-                            <p className="text-green-600 dark:text-green-400 text-sm font-medium leading-normal">+12.5%</p>
-                        </div>
+                        <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Actualizado hoy</span>
                     </div>
-                    <div className="flex min-h-[300px] flex-1 flex-col justify-end gap-8 py-4">
-                        <svg className="h-full" fill="none" preserveAspectRatio="none" viewBox="-3 0 478 150" width="100%" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25V149H0V109Z" fill="url(#paint0_linear_chart)"></path>
-                            <path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25" stroke="#1773cf" strokeLinecap="round" strokeWidth="3"></path>
-                            <defs>
-                                <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_chart" x1="236" x2="236" y1="1" y2="149">
-                                    <stop stopColor="#1773cf" stopOpacity="0.2"></stop>
-                                    <stop offset="1" stopColor="#1773cf" stopOpacity="0"></stop>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <div className="flex justify-around">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Sem 1</p>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Sem 2</p>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Sem 3</p>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Sem 4</p>
-                        </div>
+                    <div className="overflow-x-auto -mx-6">
+                        <table className="min-w-full text-left text-sm font-light">
+                            <thead className="border-b border-gray-200 dark:border-gray-700 font-medium">
+                                <tr>
+                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Producto</th>
+                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Unidades</th>
+                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Ingresos</th>
+                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                {[
+                                    { name: 'Vestido Luna', units: 124, revenue: '$3,720', margin: '42%' },
+                                    { name: 'Blusa Aura', units: 98, revenue: '$1,960', margin: '38%' },
+                                    { name: 'Jeans Indigo', units: 86, revenue: '$2,150', margin: '35%' },
+                                    { name: 'Bolso Terra', units: 64, revenue: '$4,100', margin: '48%' },
+                                ].map((p) => (
+                                    <tr key={p.name}>
+                                        <td className="whitespace-nowrap px-6 py-3 font-medium text-gray-900 dark:text-white">{p.name}</td>
+                                        <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.units}</td>
+                                        <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.revenue}</td>
+                                        <td className="whitespace-nowrap px-6 py-3 text-gray-600 dark:text-gray-300">{p.margin}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 {/* Recent Orders Table */}
-                <div className="lg:col-span-1 flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800/50">
+                <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800/50">
                     <h3 className="text-gray-900 dark:text-white text-lg font-semibold leading-normal">Órdenes Recientes</h3>
                     <div className="overflow-x-auto -mx-6">
                         <table className="min-w-full text-left text-sm font-light">

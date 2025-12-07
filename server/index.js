@@ -11,6 +11,16 @@ const port = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'please-change-this-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+const CATEGORY_MAP = {
+    tenis: 'Unisex',
+    bolsos: 'Mujer',
+    ropaDama: 'Mujer',
+    ropaHombre: 'Hombre',
+    ropaNina: 'Niña',
+    ropaNino: 'Niño',
+    accesorios: 'Unisex',
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -94,6 +104,91 @@ app.get('/me', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         return res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+// Brands
+app.get('/brands', authMiddleware, async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, name, created_at FROM brands ORDER BY name ASC');
+        res.json({ brands: rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+app.post('/brands', authMiddleware, async (req, res) => {
+    const { name } = req.body || {};
+    if (!name || !name.trim()) {
+        return res.status(400).json({ message: 'La marca es obligatoria' });
+    }
+    try {
+        const { rows } = await pool.query(
+            'INSERT INTO brands (name) VALUES ($1) ON CONFLICT (lower(name)) DO UPDATE SET name = EXCLUDED.name RETURNING id, name, created_at',
+            [name.trim()],
+        );
+        res.status(201).json({ brand: rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+// Products
+app.get('/products', authMiddleware, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT p.id, p.name, p.category, p.sku, p.price, p.stock, p.size, p.color, p.gender, p.created_at,
+                    b.id as brand_id, b.name as brand_name
+             FROM products p
+             JOIN brands b ON b.id = p.brand_id
+             ORDER BY p.id DESC`,
+        );
+        res.json({ products: rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+app.post('/products', authMiddleware, async (req, res) => {
+    const { name, brandId, category, sku, price, stock, size, color } = req.body || {};
+    if (!name || !brandId || !category || !sku) {
+        return res.status(400).json({ message: 'Nombre, marca, categoría y SKU son obligatorios' });
+    }
+    if (!CATEGORY_MAP[category]) {
+        return res.status(400).json({ message: 'Categoría inválida' });
+    }
+    if (price === undefined || Number(price) <= 0) {
+        return res.status(400).json({ message: 'Precio inválido' });
+    }
+    if (stock === undefined || Number(stock) < 0) {
+        return res.status(400).json({ message: 'Inventario inválido' });
+    }
+
+    const gender = CATEGORY_MAP[category] || 'Unisex';
+
+    try {
+        const { rows } = await pool.query(
+            `INSERT INTO products (name, brand_id, category, sku, price, stock, size, color, gender)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING id, name, category, sku, price, stock, size, color, gender, created_at`,
+            [name.trim(), brandId, category, sku.trim(), Number(price), Number(stock), size || null, color || null, gender],
+        );
+        const product = rows[0];
+        const brandRes = await pool.query('SELECT id, name FROM brands WHERE id = $1', [brandId]);
+        const brand = brandRes.rows[0];
+        return res.status(201).json({ product: { ...product, brand_id: brand.id, brand_name: brand.name } });
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ message: 'SKU duplicado' });
+        }
+        if (err.code === '23503') {
+            return res.status(400).json({ message: 'Marca no encontrada' });
+        }
+        res.status(500).json({ message: 'Error del servidor' });
     }
 });
 
