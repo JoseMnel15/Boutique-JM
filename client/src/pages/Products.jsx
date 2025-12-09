@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 
@@ -211,9 +212,19 @@ const Products = () => {
         setShowModal(true);
     };
 
-    const handleDelete = async (id) => {
-        const ok = window.confirm('¿Eliminar este producto? Esta acción no se puede deshacer.');
-        if (!ok) return;
+    const handleDelete = async (id, name) => {
+        const result = await Swal.fire({
+            title: 'Eliminar producto',
+            text: `¿Deseas eliminar "${name}"? Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true,
+        });
+        if (!result.isConfirmed) return;
         setError('');
         setStatus('');
         try {
@@ -227,8 +238,19 @@ const Products = () => {
             }
             setProducts((prev) => prev.filter((p) => p.id !== id));
             setStatus('Producto eliminado.');
+            await Swal.fire({
+                icon: 'success',
+                title: 'Producto eliminado',
+                timer: 1400,
+                showConfirmButton: false,
+            });
         } catch (err) {
             setError(err.message || 'Error al eliminar');
+            await Swal.fire({
+                icon: 'error',
+                title: 'No se pudo eliminar',
+                text: err.message || 'Intenta de nuevo',
+            });
         }
     };
 
@@ -298,9 +320,9 @@ const Products = () => {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => handleDelete(p.id)}
-                                                className="inline-flex items-center gap-1 rounded-md border border-red-500/50 px-2.5 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
-                                            >
+                                            onClick={() => handleDelete(p.id, p.name)}
+                                            className="inline-flex items-center gap-1 rounded-md border border-red-500/50 px-2.5 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold"
+                                        >
                                                 <span className="material-symbols-outlined text-sm">delete</span>
                                                 <span className="hidden sm:inline">Eliminar</span>
                                             </button>
