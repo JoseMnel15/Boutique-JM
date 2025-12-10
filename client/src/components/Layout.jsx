@@ -32,6 +32,10 @@ const Layout = ({ theme, onToggleTheme }) => {
                             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
                             <p className="text-sm font-semibold leading-normal">Panel</p>
                         </NavLink>
+                        <NavLink className={({ isActive }) => `${linkBase} ${isActive ? activeLink : ''}`} to="/pos">
+                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>point_of_sale</span>
+                            <p className="text-sm font-medium leading-normal">Punto de Venta</p>
+                        </NavLink>
                         <NavLink className={({ isActive }) => `${linkBase} ${isActive ? activeLink : ''}`} to="/products">
                             <span className="material-symbols-outlined">shopping_bag</span>
                             <p className="text-sm font-medium leading-normal">Inventario</p>
@@ -59,9 +63,6 @@ const Layout = ({ theme, onToggleTheme }) => {
                     </nav>
                 </div>
                 <div className="flex flex-col gap-4 mt-auto">
-                    <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]" type="button">
-                        <span className="truncate">Punto de Venta</span>
-                    </button>
                     <div className="flex flex-col gap-1">
                         <button
                             type="button"
