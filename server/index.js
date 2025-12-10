@@ -13,12 +13,17 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const CATEGORY_MAP = {
     tenis: 'Unisex',
+    tenisHombre: 'Hombre',
+    tenisMujer: 'Mujer',
     bolsos: 'Mujer',
+    bolsosHombre: 'Hombre',
     ropaDama: 'Mujer',
     ropaHombre: 'Hombre',
     ropaNina: 'Niña',
     ropaNino: 'Niño',
     accesorios: 'Unisex',
+    accesoriosHombre: 'Hombre',
+    accesoriosMujer: 'Mujer',
 };
 
 app.use(cors());
@@ -153,9 +158,12 @@ app.get('/products', authMiddleware, async (req, res) => {
 });
 
 app.post('/products', authMiddleware, async (req, res) => {
-    const { name, brandId, category, sku, price, stock, size, color } = req.body || {};
-    if (!name || !brandId || !category || !sku) {
-        return res.status(400).json({ message: 'Nombre, marca, categoría y SKU son obligatorios' });
+    const {
+        name, brandId, category, sku, barcode, price, stock, size, color,
+    } = req.body || {};
+    const productCode = (barcode || sku || '').trim();
+    if (!name || !brandId || !category || !productCode) {
+        return res.status(400).json({ message: 'Nombre, marca, categoría y código de barras son obligatorios' });
     }
     if (!CATEGORY_MAP[category]) {
         return res.status(400).json({ message: 'Categoría inválida' });
@@ -174,7 +182,7 @@ app.post('/products', authMiddleware, async (req, res) => {
             `INSERT INTO products (name, brand_id, category, sku, price, stock, size, color, gender)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING id, name, category, sku, price, stock, size, color, gender, created_at`,
-            [name.trim(), brandId, category, sku.trim(), Number(price), Number(stock), size || null, color || null, gender],
+            [name.trim(), brandId, category, productCode, Number(price), Number(stock), size || null, color || null, gender],
         );
         const product = rows[0];
         const brandRes = await pool.query('SELECT id, name FROM brands WHERE id = $1', [brandId]);
@@ -194,9 +202,12 @@ app.post('/products', authMiddleware, async (req, res) => {
 
 app.put('/products/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { name, brandId, category, sku, price, stock, size, color } = req.body || {};
-    if (!name || !brandId || !category || !sku) {
-        return res.status(400).json({ message: 'Nombre, marca, categoría y SKU son obligatorios' });
+    const {
+        name, brandId, category, sku, barcode, price, stock, size, color,
+    } = req.body || {};
+    const productCode = (barcode || sku || '').trim();
+    if (!name || !brandId || !category || !productCode) {
+        return res.status(400).json({ message: 'Nombre, marca, categoría y código de barras son obligatorios' });
     }
     if (!CATEGORY_MAP[category]) {
         return res.status(400).json({ message: 'Categoría inválida' });
@@ -225,7 +236,7 @@ app.put('/products/:id', authMiddleware, async (req, res) => {
                  created_at = created_at
              WHERE id = $10
              RETURNING id, name, category, sku, price, stock, size, color, gender, created_at`,
-            [name.trim(), brandId, category, sku.trim(), Number(price), Number(stock), size || null, color || null, gender, id],
+            [name.trim(), brandId, category, productCode, Number(price), Number(stock), size || null, color || null, gender, id],
         );
         if (!rows.length) {
             return res.status(404).json({ message: 'Producto no encontrado' });

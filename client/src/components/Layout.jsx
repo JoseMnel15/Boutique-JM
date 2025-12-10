@@ -60,7 +60,7 @@ const Layout = ({ theme, onToggleTheme }) => {
                 </div>
                 <div className="flex flex-col gap-4 mt-auto">
                     <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]" type="button">
-                        <span className="truncate">Agregar Producto</span>
+                        <span className="truncate">Punto de Venta</span>
                     </button>
                     <div className="flex flex-col gap-1">
                         <button

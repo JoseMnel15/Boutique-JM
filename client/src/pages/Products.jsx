@@ -1,17 +1,25 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+    useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import JsBarcode from 'jsbarcode';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 
 const categoryConfig = {
-    tenis: { label: 'Tenis', sizeType: 'shoe', audience: 'Unisex' },
-    bolsos: { label: 'Bolsos', sizeType: 'none', audience: 'Mujer' },
+    tenis: { label: 'Tenis (Unisex)', sizeType: 'shoe', audience: 'Unisex' },
+    tenisHombre: { label: 'Tenis Hombre', sizeType: 'shoe', audience: 'Hombre' },
+    tenisMujer: { label: 'Tenis Mujer', sizeType: 'shoe', audience: 'Mujer' },
+    bolsos: { label: 'Bolsos (Mujer)', sizeType: 'none', audience: 'Mujer' },
+    bolsosHombre: { label: 'Bolsos Hombre', sizeType: 'none', audience: 'Hombre' },
     ropaDama: { label: 'Ropa Dama', sizeType: 'clothing', audience: 'Mujer' },
     ropaHombre: { label: 'Ropa Hombre', sizeType: 'clothing', audience: 'Hombre' },
     ropaNina: { label: 'Ropa Niña', sizeType: 'kids-clothing', audience: 'Niña' },
     ropaNino: { label: 'Ropa Niño', sizeType: 'kids-clothing', audience: 'Niño' },
-    accesorios: { label: 'Accesorios', sizeType: 'none', audience: 'Unisex' },
+    accesorios: { label: 'Accesorios (Unisex)', sizeType: 'none', audience: 'Unisex' },
+    accesoriosHombre: { label: 'Accesorios Hombre', sizeType: 'none', audience: 'Hombre' },
+    accesoriosMujer: { label: 'Accesorios Mujer', sizeType: 'none', audience: 'Mujer' },
 };
 
 const sizeOptionsByType = {
@@ -33,11 +41,11 @@ const Products = () => {
     const [brandMode, setBrandMode] = useState('select'); // select | new
     const [newBrand, setNewBrand] = useState('');
     const [editingId, setEditingId] = useState(null);
+    const [labelCode, setLabelCode] = useState('');
     const [form, setForm] = useState({
         name: '',
         brand: '',
         category: 'tenis',
-        sku: '',
         price: '',
         stock: '',
         size: '',
@@ -94,12 +102,37 @@ const Products = () => {
         }
     }, [showModal, brands.length, loadData]);
 
+    useEffect(() => {
+        if (!labelCode) {
+            setLabelCode(''); // ensure sync reset
+        }
+    }, [labelCode]);
+
+    const barcodeRef = useRef(null);
+    useEffect(() => {
+        if (barcodeRef.current && labelCode) {
+            try {
+                JsBarcode(barcodeRef.current, labelCode, {
+                    format: 'CODE128',
+                    width: 2,
+                    height: 60,
+                    displayValue: true,
+                    fontSize: 14,
+                    margin: 8,
+                });
+            } catch {
+                // ignore invalid codes
+            }
+        } else if (barcodeRef.current) {
+            barcodeRef.current.innerHTML = '';
+        }
+    }, [labelCode, showModal]);
+
     const resetForm = () => {
         setForm({
             name: '',
             brand: brands[0]?.id || '',
             category: 'tenis',
-            sku: '',
             price: '',
             stock: '',
             size: '',
@@ -108,6 +141,7 @@ const Products = () => {
         setBrandMode('select');
         setNewBrand('');
         setEditingId(null);
+        setLabelCode('');
     };
 
     const handleSubmit = async (e) => {
@@ -116,8 +150,13 @@ const Products = () => {
         setStatus('');
         setLoading(true);
 
-        if (!form.name.trim() || !form.sku.trim() || (!form.brand && brandMode !== 'new')) {
-            setError('Nombre, marca y SKU son obligatorios.');
+        if (!form.name.trim() || (!labelCode && brandMode !== 'new') || (!form.brand && brandMode !== 'new')) {
+            setError('Nombre, marca y código de barras son obligatorios.');
+            setLoading(false);
+            return;
+        }
+        if (!labelCode) {
+            setError('Captura o genera un código de barras.');
             setLoading(false);
             return;
         }
@@ -158,7 +197,8 @@ const Products = () => {
                 name: form.name.trim(),
                 brandId,
                 category: form.category,
-                sku: form.sku.trim(),
+                barcode: labelCode.trim(),
+                sku: labelCode.trim(), // compat con back anterior
                 price: Number(form.price),
                 stock: Number(form.stock),
                 size: sizeType === 'none' ? null : form.size,
@@ -203,12 +243,12 @@ const Products = () => {
             name: product.name || '',
             brand: product.brand_id || product.brand || '',
             category: product.category || 'tenis',
-            sku: product.sku || '',
             price: product.price || '',
             stock: product.stock || '',
             size: product.size || '',
             color: product.color || '',
         });
+        setLabelCode(product.sku || product.barcode || '');
         setShowModal(true);
     };
 
@@ -252,6 +292,43 @@ const Products = () => {
                 text: err.message || 'Intenta de nuevo',
             });
         }
+    };
+
+    const generateLabelCode = () => {
+        const randomCode = `PRD-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        setLabelCode(labelCode || randomCode);
+    };
+
+    const printLabel = () => {
+        if (!form.name.trim() || !labelCode || !form.price || form.stock === '' || (sizeType !== 'none' && !form.size)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Completa el formulario',
+                text: 'Llena nombre, código, precio, inventario y talla si aplica antes de imprimir.',
+            });
+            return;
+        }
+        if (!labelCode) {
+            setError('Genera o captura un código de barras para imprimir.');
+            return;
+        }
+        const labelHtml = `
+            <div style="font-family: Arial, sans-serif; width: 320px; padding: 12px 16px; border: 1px solid #ddd;">
+                <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">${form.name || 'Producto'}</div>
+                <div style="font-size: 12px; color: #555; margin-bottom: 6px;">
+                    Código: ${labelCode || 'N/A'}<br/>
+                    Talla: ${form.size || '—'} &nbsp; | &nbsp; Color: ${form.color || '—'}
+                </div>
+                ${barcodeRef.current ? barcodeRef.current.outerHTML : ''}
+            </div>
+        `;
+        const printWindow = window.open('', 'PRINT', 'width=400,height=400');
+        if (!printWindow) return;
+        printWindow.document.write(`<!doctype html><html><head><title>Etiqueta</title></head><body>${labelHtml}</body></html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
     };
 
     return (
@@ -419,16 +496,44 @@ const Products = () => {
                                         ))}
                                     </select>
                                 </label>
-                                <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    SKU
-                                    <input
-                                        className="form-input w/full rounded-lg border border-gray-300 dark.border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
-                                        value={form.sku}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))}
-                                        placeholder="TEN-001"
-                                        required
-                                    />
-                                </label>
+                                <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-[1.2fr,0.8fr] gap-3 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Código de barras / etiqueta</span>
+                                        <input
+                                            className="form-input w/full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2 text-base dark:text-white focus:ring-2 focus:ring-primary"
+                                            value={labelCode}
+                                            onChange={(e) => setLabelCode(e.target.value)}
+                                            placeholder="Escanéalo o genera uno"
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Úsalo si el producto no trae etiqueta. Se imprime con nombre, talla y color.</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={generateLabelCode}
+                                                className="rounded-md border border-primary/50 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
+                                            >
+                                                Generar código
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={printLabel}
+                                                className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90"
+                                            >
+                                                Imprimir etiqueta
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Vista previa</span>
+                                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 min-h-[120px] flex items-center justify-center">
+                                            {labelCode ? (
+                                                <svg ref={barcodeRef} />
+                                            ) : (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Ingresa o genera un código para ver la vista previa.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                                 <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Precio
                                     <input
