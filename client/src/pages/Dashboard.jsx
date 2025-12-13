@@ -101,7 +101,7 @@ const Dashboard = () => {
                             <thead className="border-b border-gray-200 dark:border-gray-700 font-medium">
                                 <tr>
                                     <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs" scope="col">ID Orden</th>
-                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs" scope="col">Cliente</th>
+                                    <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs" scope="col">Producto</th>
                                     <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs" scope="col">Total</th>
                                     <th className="px-6 py-3 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs" scope="col">Estado</th>
                                 </tr>
@@ -109,31 +109,31 @@ const Dashboard = () => {
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr>
                                     <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">#34567</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Olivia Martin</td>
+                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Playera</td>
                                     <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">$125.50</td>
                                     <td className="whitespace-nowrap px-6 py-4"><span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/50 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">Enviado</span></td>
                                 </tr>
                                 <tr>
                                     <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">#34566</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Liam Johnson</td>
+                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Playera</td>
                                     <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">$89.00</td>
                                     <td className="whitespace-nowrap px-6 py-4"><span className="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/50 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-300">Procesando</span></td>
                                 </tr>
                                 <tr>
                                     <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">#34565</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Ava Williams</td>
+                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Playera</td>
                                     <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">$210.00</td>
                                     <td className="whitespace-nowrap px-6 py-4"><span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/50 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">Enviado</span></td>
                                 </tr>
                                 <tr>
                                     <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">#34564</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Noah Brown</td>
+                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Playera</td>
                                     <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">$45.75</td>
                                     <td className="whitespace-nowrap px-6 py-4"><span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/50 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:text-red-300">Cancelado</span></td>
                                 </tr>
                                 <tr>
                                     <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">#34563</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Emma Jones</td>
+                                    <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">Playera</td>
                                     <td className="whitespace-nowrap px-6 py-4 text-gray-600 dark:text-gray-300">$350.20</td>
                                     <td className="whitespace-nowrap px-6 py-4"><span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/50 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">Enviado</span></td>
                                 </tr>

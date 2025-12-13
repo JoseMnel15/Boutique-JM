@@ -46,11 +46,11 @@ const Layout = ({ theme, onToggleTheme }) => {
                         </a>
                         <a className={linkBase} href="#">
                             <span className="material-symbols-outlined">group</span>
-                            <p className="text-sm font-medium leading-normal">Clientes</p>
+                            <p className="text-sm font-medium leading-normal">Credito</p>
                         </a>
                         <a className={linkBase} href="#">
                             <span className="material-symbols-outlined">analytics</span>
-                            <p className="text-sm font-medium leading-normal">Reportes</p>
+                            <p className="text-sm font-medium leading-normal">Sistema De Apartado</p>
                         </a>
                         <NavLink className={({ isActive }) => `${linkBase} ${isActive ? activeLink : ''}`} to="/users">
                             <span className="material-symbols-outlined">badge</span>
@@ -58,7 +58,7 @@ const Layout = ({ theme, onToggleTheme }) => {
                         </NavLink>
                         <a className={linkBase} href="#">
                             <span className="material-symbols-outlined">settings</span>
-                            <p className="text-sm font-medium leading-normal">Configuración</p>
+                            <p className="text-sm font-medium leading-normal">Abonos</p>
                         </a>
                     </nav>
                 </div>
